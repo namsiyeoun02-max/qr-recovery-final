@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="GF(256) 기반 Reed-Solomon QR 오류 정정 과정을 직접 조작하며 이해하는 시뮬레이터">
+  <title>RS / QR 오류 정정 시뮬레이터</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23145dff'/%3E%3Cpath d='M7 7h7v7H7zm11 0h7v7h-7zM7 18h7v7H7zm12 1h3v3h3v3h-6z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="qr-explorer.css">
+<style>
+.steps{grid-template-columns:repeat(7,minmax(100px,1fr));overflow-x:auto}
+#interactive-lab{scroll-margin-top:140px}
+#interactive-lab>.section-head{margin-bottom:28px}
+@media(max-width:760px){.steps{grid-template-columns:repeat(7,minmax(85px,1fr))}}
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#cover" aria-label="표지로 이동"><span class="brand-mark">RS</span><span>QR RECOVERY LAB</span><em>CSZ</em></a>
+    <div class="status"><span class="status-dot"></span>GF(2⁸) · <span id="rsStatus">dynamic RS code</span></div>
+  </header>
+
+  <section id="cover" class="cover" aria-labelledby="cover-title">
+    <div class="cover-copy">
+      <p class="cover-kicker">REED–SOLOMON ERROR CORRECTION LAB</p>
+      <h1 id="cover-title"><span>QR</span> Recovery</h1>
+      <p class="cover-summary">유한체 기반 Reed–Solomon 오류정정 알고리즘을 이용한 손상 QR 복원 과정 시각화 시스템</p>
+      <button class="cover-start" data-target="qr-structure">QR 구조부터 살펴보기</button>
+      <div class="cover-keywords" aria-label="핵심 기술"><span>QR</span><span>GF(256)</span><span>RS CODE</span></div>
+    </div>
+    <div class="cover-visual" aria-hidden="true">
+      <div class="cover-orbit orbit-one"></div><div class="cover-orbit orbit-two"></div>
+      <div class="cover-qr-frame"><img src="site-qr.svg" alt=""><i></i></div>
+      <span class="cover-node node-one"></span><span class="cover-node node-two"></span><span class="cover-node node-three"></span>
+    </div>
+  </section>
+
+  <nav class="steps" aria-label="학습 단계">
+    <button class="step active" data-target="qr-structure"><b>QR</b><span>구조 탐색</span></button>
+    <button class="step" data-target="concept"><b>01</b><span>핵심 개념</span></button>
+    <button class="step" data-target="syndrome"><b>02</b><span>오류 존재</span></button>
+    <button class="step" data-target="locator"><b>03</b><span>오류 위치</span></button>
+    <button class="step" data-target="magnitude"><b>04</b><span>오류 크기</span></button>
+    <button class="step" data-target="verify"><b>05</b><span>검산</span></button>
+      <button class="step" data-target="interactive-lab"><b>06</b><span>직접 복원</span></button>
+  </nav>
+
+  <main>
+<section id="qr-structure" class="panel qx-section" aria-labelledby="qx-heading">
+<div class="section-head"><div><p class="eyebrow">QR ANATOMY</p><h1 id="qx-heading">QR의 각 구역은<br>무슨 일을 할까요?</h1></div><p><span>마우스를 올리면 색이 서서히 나타납니다.</span><span>클릭하면 선택한 부분이 확대되고 설명이 열립니다.</span></p></div>
+<div class="qx-layout"><div class="qx-board"><div class="qx-board-top"><span>INTERACTIVE QR</span><button id="qx-clear" type="button">강조 해제</button></div><div id="qx-map" class="qx-map"></div><div class="qx-caption">버전 2 · 25 × 25 모듈 · 오류정정 M</div><p class="qx-note">마우스 올리기: 색 강조 · 클릭: 확대와 설명 · Esc: 닫기</p></div>
+<article class="qx-detail" aria-live="polite" aria-atomic="true"><span id="qx-en"></span><h2 id="qx-title"></h2><p id="qx-lead"></p><dl><div><dt>위치와 형태</dt><dd id="qx-location"></dd></div><div><dt>어떤 구역인가요?</dt><dd id="qx-description"></dd></div><div><dt>어떤 역할을 하나요?</dt><dd id="qx-role"></dd></div></dl><div id="qx-process"></div><button class="qx-next" type="button" data-target="concept">이제 GF(256)와 RS 알아보기 <span>→</span></button></article></div>
+</section>
+    <section id="concept" class="panel active" aria-labelledby="concept-title">
+      <div class="section-head">
+        <div><p class="eyebrow">FOUNDATION</p><h1 id="concept-title">QR 데이터를 유한체로 표현하기</h1></div>
+        <p><span>QR 데이터와 오류정정 코드는 바이트 단위로 처리됩니다.</span><span>각 바이트를 GF(2⁸)의 원소로 표현하고, 덧셈은 XOR로 계산합니다.</span></p>
+      </div>
+
+      <div class="concept-grid">
+        <article class="card qr-card">
+          <div class="card-label">QR CODE</div>
+          <div class="qr-wrap"><div id="miniQr" class="mini-qr" aria-label="개념용 QR 격자"></div><div class="scanline"></div></div>
+          <p>검은색과 흰색 모듈이 모여 데이터와 오류정정 정보를 표현합니다.</p>
+        </article>
+        <article class="card flow-card">
+          <div class="byte-flow"><span>01001000</span><i>→</i><strong>72</strong><i>→</i><span>α<sup>?</sup></span></div>
+          <h2>같은 데이터, 세 가지 표현</h2>
+          <p>컴퓨터는 비트로 저장하고, 화면에는 10진수로 표시하며, Reed-Solomon 연산에서는 유한체 원소로 다룹니다.</p>
+          <div class="field-badge">GF(2⁸) = 256개의 원소</div>
+        </article>
+      </div>
+
+      <div class="lab-grid">
+        <article class="lab card">
+          <div class="card-label">XOR · 유한체 덧셈</div>
+          <div class="inputs"><label>A<input id="xorA" type="number" min="0" max="255" value="172"></label><span>⊕</span><label>B<input id="xorB" type="number" min="0" max="255" value="54"></label><button id="xorRun">계산</button></div>
+          <div id="xorVisual" class="binary-calc"></div>
+        </article>
+        <article class="lab card">
+          <div class="card-label">GF(256) · 유한체 곱셈</div>
+          <div class="inputs"><label>A<input id="mulA" type="number" min="0" max="255" value="2"></label><span>×</span><label>B<input id="mulB" type="number" min="0" max="255" value="3"></label><button id="mulRun">계산</button></div>
+          <div id="mulVisual" class="result-box"></div>
+          <p class="note">기약다항식 x⁸+x⁴+x³+x²+1 (0x11d)을 기준으로 축약합니다.</p>
+        </article>
+      </div>
+
+      <article class="card polynomial">
+        <div><div class="card-label">다항식 표현</div><h2>[104, 105]는 왜 104x + 105일까?</h2><p>배열의 왼쪽 바이트부터 높은 차수의 계수로 놓습니다. 오류 t개를 정정하려면 패리티 심볼 2t개를 붙이고, 생성다항식으로 나눈 나머지를 더합니다.</p></div>
+        <div class="formula">C(x) = M(x)x²ᵗ + R(x)</div>
+      </article>
+      <div class="next-row"><button class="primary next" data-target="syndrome">오류를 만들어 Syndrome 계산하기 <span>→</span></button></div>
+    </section>
+
+    <section id="syndrome" class="panel" aria-labelledby="syndrome-title">
+      <div class="section-head">
+        <div><p class="eyebrow">SYNDROME</p><h1 id="syndrome-title">Syndrome으로 오류 여부 확인하기</h1></div>
+        <p><span>수신 다항식 r(x)에 <b id="syndromeRange">생성다항식의 근</b>을 차례로 대입합니다.</span><span>오류 t개에 필요한 Syndrome과 패리티 심볼은 각각 2t개입니다.</span></p>
+      </div>
+      <div class="sim-layout">
+        <aside class="controls card">
+          <div class="card-label">손상 조건</div>
+          <div class="random-count"><span>이번 오류 개수</span><strong id="errorCountLabel">?</strong></div>
+          <p class="control-note"><span>실행할 때마다 1~6개의 오류가 무작위 위치에 발생합니다.</span><span id="parityCountText">오류 개수에 맞춰 패리티와 Syndrome 개수가 정해집니다.</span></p>
+          <button id="corruptRun" class="primary">1~6개 오류 무작위 생성</button>
+          <button id="syndromeRun" class="secondary">Syndrome 단계 실행</button>
+          <div class="legend"><span><i class="original"></i>정상</span><span><i class="damaged"></i>손상</span><span><i class="found"></i>탐지</span></div>
+        </aside>
+        <div class="workspace" id="syndromeWorkspace">
+          <article class="card codeword-card">
+            <div class="code-head"><div><div class="card-label">RECEIVED CODEWORD</div><h2 id="codewordTitle">오류가 포함된 코드워드</h2></div><span id="errorState" class="pill warning">계산 전</span></div>
+            <div id="codeword" class="codeword"></div>
+            <div class="coefficient-axis"><span>고차항</span><span>낮은 차수항</span></div>
+          </article>
+          <article class="card syndrome-card">
+            <div class="card-label">r(αⁱ) 계산 결과</div>
+            <div id="syndromeCells" class="syndrome-cells"></div>
+            <div id="syndromeConclusion" class="conclusion muted">실행 버튼을 눌러 계산 과정을 확인하세요.</div>
+          </article>
+        </div>
+      </div>
+      <div class="next-row"><button class="primary next" data-target="locator">오류 위치 방정식으로 이동 <span>→</span></button></div>
+    </section>
+
+    <section id="locator" class="panel" aria-labelledby="locator-title">
+      <div class="section-head"><div><p class="eyebrow">BERLEKAMP–MASSEY + CHIEN SEARCH</p><h1 id="locator-title">오류 위치 다항식으로 위치 찾기</h1></div><p><span>Berlekamp–Massey 알고리즘으로 오류 위치 다항식 Λ(x)를 만듭니다.</span><span>그다음 각 바이트 위치를 대입해 값이 0이 되는 지점을 찾습니다.</span></p></div>
+      <div class="locator-grid">
+        <article class="card bm-card">
+          <div class="card-label">01 · Berlekamp–Massey</div>
+          <div id="bmSteps" class="algorithm-steps"><p class="muted">먼저 이전 단계에서 Syndrome을 계산하세요.</p></div>
+          <div id="locatorPolynomial" class="formula large">Λ(x) = ?</div>
+          <button id="bmRun" class="primary">위치 방정식 만들기</button>
+        </article>
+        <article class="card chien-card">
+          <div class="card-label">02 · Chien Search</div>
+          <div id="chienTrack" class="chien-track"></div>
+          <div id="positionResult" class="conclusion muted">Λ(x)가 만들어지면 위치를 탐색할 수 있습니다.</div>
+          <button id="chienRun" class="secondary"><span id="chienCount">전체</span> 위치 순서대로 검사</button>
+        </article>
+      </div>
+      <div class="next-row"><button class="primary next" data-target="magnitude">오류 크기 계산으로 이동 <span>→</span></button></div>
+    </section>
+
+    <section id="magnitude" class="panel" aria-labelledby="magnitude-title">
+      <div class="section-head"><div><p class="eyebrow">FORNEY</p><h1 id="magnitude-title">각 오류의 크기 계산하기</h1></div><p><span>찾아낸 오류 위치를 Forney 식에 대입합니다.</span><span>오류가 여러 개라면 각 위치의 오류 크기를 따로 계산합니다.</span></p></div>
+      <button id="forneyRun" class="primary wide forney-action">오류 크기 계산</button>
+      <div id="forneyResults" class="forney-results"><article class="card metric placeholder"><span>오류 위치를 찾은 뒤 계산하세요.</span><strong>?</strong><small>Yₖ = Ω(Xₖ⁻¹) / Λ′(Xₖ⁻¹)</small></article></div>
+    </section>
+
+    <section id="verify" class="panel" aria-labelledby="verify-title">
+      <div class="section-head">
+        <div><p class="eyebrow">VERIFICATION</p><h1 id="verify-title">복원 결과 검산하기</h1></div>
+        <p><span>손상된 값과 계산한 오류 크기를 XOR합니다.</span><span>결과가 원래 코드워드와 같으면 오류 정정이 완료된 것입니다.</span></p>
+      </div>
+      <article class="card proof-card">
+        <div><div class="card-label">CORRECTION CHECK</div><h2>바이트별 검산</h2><p>각 오류 위치의 복원 계산을 한 줄씩 확인합니다.</p></div>
+        <div id="proofEquation" class="proof-equation"><span class="proof-empty">4단계에서 오류 크기를 계산하면 검산 결과가 표시됩니다.</span></div>
+      </article>
+      <div id="proofStatus" class="verify-status muted">오류 크기 계산을 기다리고 있습니다.</div>
+    </section>
+  
+    <section id="interactive-lab" class="panel" aria-labelledby="interactive-lab-title">
+      <div class="section-head">
+        <div><p class="eyebrow">HANDS-ON QR RECOVERY</p><h1 id="interactive-lab-title">내가 만든 QR,<br>손상부터 복원까지</h1></div>
+        <p><span>원하는 텍스트를 직접 입력해 QR을 만들어 보세요.</span><span>손상 정도를 정하고 복원한 뒤, 입력한 텍스트가 되살아나는지 확인합니다.</span></p>
+      </div>
+      <iframe id="qr-real-lab" title="텍스트 QR 생성·칸 뒤집기·RS 복원 실험" src="lab.html" scrolling="no" style="display:block;width:100%;height:1300px;border:0;background:transparent"></iframe>
+    </section>
+
+  </main>
+
+  <footer><span>Reed-Solomon Error Correction Visualizer</span><span>GF(256) primitive polynomial · 0x11d</span></footer>
+  <script src="app.js"></script>
+<script src="qr-explorer.js"></script>
+<script>
+(() => {
+ const frame=document.getElementById('qr-real-lab');
+ addEventListener('message',event=>{
+  if(event.source!==frame.contentWindow||event.origin!==location.origin||event.data?.kind!=='qr-lab-height')return;
+  const height=Number(event.data.height);
+  if(Number.isFinite(height)&&height>300&&height<20000)frame.style.height=height+'px';
+ });
+})();
+</script>
+</body>
+</html>

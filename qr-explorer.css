@@ -1,0 +1,25 @@
+.qx-layout{display:block}.qx-board{box-sizing:border-box;max-width:780px;width:100%;margin:auto;padding:24px;background:white;border:1px solid #e0e6f0;border-radius:24px}.qx-board-top{display:flex;align-items:center;justify-content:space-between;color:#66738b;font-size:12px;letter-spacing:.1em}.qx-board-top button{padding:10px 14px;background:#f7f9fd;border:1px solid #dce3ee;border-radius:10px;color:#46536b;cursor:pointer}.qx-map{max-width:580px;margin:18px auto 0}.qx-map svg{display:block;width:100%;height:auto;overflow:visible;touch-action:manipulation;shape-rendering:geometricPrecision}.qx-map svg g[data-region] rect{pointer-events:all}.qx-map .qr-color-layer{opacity:0;transition:opacity .55s ease;pointer-events:none}.qx-map .qr-color-layer.is-hovered{opacity:1}.qx-map .qr-selection{pointer-events:none;filter:drop-shadow(0 .18px .22px #14203388)}.qx-caption{text-align:center;font-size:13px;color:#657189;margin:10px 0 18px}.qx-note{font-size:13px!important;line-height:1.7;color:#7b8597;margin:14px 0 0}.qx-detail,.qx-legend{display:none!important}.steps{grid-template-columns:repeat(6,minmax(95px,1fr));overflow-x:auto}.qx-section{scroll-margin-top:140px}.qr-concept-popup{position:fixed;z-index:99999;width:330px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;padding:24px;background:#fff;border:1px solid #e0e6f0;border-top:4px solid var(--accent);border-radius:18px;box-shadow:0 16px 48px #24314d30;animation:qr-card-in .22s ease}.qr-concept-popup[hidden]{display:none!important}.qr-concept-popup button{position:absolute;right:12px;top:10px;border:0;border-radius:50%;width:30px;height:30px;background:#f1f5f9;color:#475569;font-size:20px;cursor:pointer}.qr-concept-popup small{display:block;padding-right:28px;font-size:11px;letter-spacing:.12em;color:var(--accent)}.qr-concept-popup h3{font-size:24px;line-height:1.35;color:#172033;margin:12px 0}.qr-popup-lead{font-size:16px;line-height:1.6;color:#334155;margin:0 0 14px}.qr-popup-body{font-size:14px;line-height:1.85;color:#526078;margin:0}.qr-popup-location{font-size:12px;line-height:1.6;color:#68758a;background:#f4f6fa;border-radius:10px;padding:12px;margin-top:16px}.qr-sr-controls{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.qr-sr-controls:focus-within{position:static;width:auto;height:auto;clip-path:none;display:flex;flex-wrap:wrap;gap:8px}.qr-sr-controls button{padding:10px}@keyframes qr-card-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@media(max-width:760px){.qx-board{padding:16px}.steps{grid-template-columns:repeat(6,minmax(85px,1fr))}.qr-concept-popup{width:300px;padding:20px}}@media(prefers-reduced-motion:reduce){.qx-map .qr-color-layer{transition:none}.qr-concept-popup{animation:none}}
+
+.qx-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:28px;align-items:start}.qx-board{grid-column:1;min-width:0}.qx-layout>.qr-concept-popup{grid-column:2;grid-row:1;position:sticky;top:150px;left:auto;width:100%;max-width:none;max-height:calc(100vh - 170px);margin:0;z-index:5}@media(max-width:950px){.qx-layout{grid-template-columns:minmax(0,1fr);gap:20px}.qx-layout>.qr-concept-popup{grid-column:1;grid-row:2;position:static;max-height:none}}
+/* 정렬 패턴 테두리: 초록색 */
+#qx-map g[data-region="alignment"] > path[stroke] {
+  stroke: #059669;
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 클릭한 구역: 아래쪽 그림자 + 은은한 후광 */
+#qx-map .qr-selection {
+  filter:
+    drop-shadow(0 0.35px 0.2px rgba(15, 23, 42, 0.45))
+    drop-shadow(0 0 0.3px rgba(99, 102, 241, 0.35));
+}
+
+/* 선택하면 배경 QR을 살짝 흐리게 해서 입체감 강조 */
+#qx-map svg > g[data-region] {
+  transition: opacity 0.3s ease;
+}
+
+#qx-map svg:has(.qr-selection) > g[data-region] {
+  opacity: 0.65;
+}
